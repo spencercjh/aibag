@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+    <Button
+            android:id="@+id/button_register"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="92dp"
+            android:paddingBottom="@dimen/margin_small"
+            android:paddingTop="@dimen/margin_small"
+            android:text="@string/注册物品"
+            android:background="@drawable/btn_orange_selector"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/text_size_normal"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentStart="true"/>
+    <Button
+            android:id="@+id/button_manual_check"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="217dp"
+            android:paddingBottom="@dimen/margin_small"
+            android:paddingTop="@dimen/margin_small"
+            android:text="@string/手动检查"
+            android:background="@drawable/btn_orange_selector"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/text_size_normal"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"/>
+    <Button
+            android:id="@+id/button_schedule_check"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingBottom="@dimen/margin_small"
+            android:paddingTop="@dimen/margin_small"
+            android:text="@string/定时检查"
+            android:background="@drawable/btn_orange_selector"
+            android:textColor="@android:color/white"
+            android:textSize="@dimen/text_size_normal"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentBottom="true"
+            android:layout_marginBottom="185dp"/>
+
+</RelativeLayout>

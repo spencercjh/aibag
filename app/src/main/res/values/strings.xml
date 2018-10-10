@@ -1,0 +1,85 @@
+<resources>
+    <string name="app_name">智能书包</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="bluetooth_option">Bluetooth option</string>
+    <string name="serial_option">Serialport option</string>
+    <string name="tag_count">标签个数：</string>
+    <string name="clear_data">清空数据</string>
+    <string name="rbInventorySingle">单标签</string>
+    <string name="rbInventoryLoop">循环读标签</string>
+    <string name="inventory">读标签</string>
+    <string name="stop_read">停止读标签</string>
+    <string name="epc">EPC</string>
+    <string name="len">长度</string>
+    <string name="count">次数</string>
+    <string name="inventory_tag">识别标签</string>
+    <string name="select_tag">指定标签</string>
+    <string name="tag">标签号</string>
+    <string name="menbank">存储区</string>
+    <string name="access_password">访问密码：</string>
+    <string name="addr">地址</string>
+    <string name="read_data">读数据</string>
+    <string name="readData">读取数据</string>
+    <string name="write_data">写数据</string>
+    <string name="serialport_setting">串口设置</string>
+    <string name="com_id">COM口：</string>
+    <string name="baudrate">波特率：</string>
+    <string name="connected_flag">通信状态：</string>
+    <string name="output_power">输出功率：</string>
+    <string name="work_freq">工作频率：</string>
+    <string name="connect_device">连接设备</string>
+    <string name="disconnect">未连接</string>
+    <string name="connected">已连接</string>
+    <string name="into_reader">进入读写器操作</string>
+    <string name="work_area">工作区域</string>
+    <string name="exit">退出</string>
+    <string name="lock_membank">锁定区域：</string>
+    <string name="lock_type">锁定类型：</string>
+    <string name="kill_password">销毁密码：</string>
+    <string name="kill">销毁</string>
+    <string name="lock">锁定</string>
+    <string name="wifi_option">WIFI操作</string>
+    <string name="ust_option">USB操作</string>
+    <string name="audio_option">音频接口操作</string>
+    <string name="lock_kill">锁定/销毁</string>
+    <string name="para_setting">参数设置</string>
+    <string name="read_write">读/写操作</string>
+    <string name="data_bit">数据位：</string>
+    <string name="stop_bit">停止位：</string>
+    <string name="parity">奇偶校验：</string>
+    <string name="setting">设置</string>
+    <string name="to_uhf">进入UHF操作</string>
+    <string name="help">帮助</string>
+    <string name="connect_info">公司联系方式</string>
+    <string name="help_info">\n
+        服务热线：0755-86597322\n\n
+        全国统一技术支持热线：0755-86597322\n\n
+        全球统一服务热线：400-6885962\n\n
+        服务工程师邮箱：support@jiuray.com\n\n
+        公司网址：http://www.jiuray.com\n
+    </string>
+
+    <string name="account">请输入登录的账号</string>
+    <string name="password">请输入登录密码</string>
+    <string name="check_password">记住密码</string>
+    <string name="check_login">自动登录</string>
+    <string name="login">登录</string>
+    <string name="loading">正在加载数据</string>
+    <string name="注册记录">注册记录</string>
+    <string name="与注册记录比较">与注册记录比较</string>
+    <string name="定时提醒">定时提醒</string>
+    <string name="title_activity_main">MainActivity</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="nav_header_title">Android Studio</string>
+    <string name="nav_header_subtitle">android.studio@android.com</string>
+    <string name="nav_header_desc">Navigation header</string>
+    <string name="注册物品">注册物品</string>
+    <string name="手动检查">手动检查</string>
+    <string name="定时检查">定时检查</string>
+    <string name="智能书包">智能书包</string>
+    <string name="已找到的物品">已找到的物品</string>
+    <string name="遗失的物品">遗失的物品</string>
+
+</resources>

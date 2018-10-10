@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical" >
+
+    <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@mipmap/textview"
+            android:padding="5dp"
+            android:text="@string/已找到的物品"
+            android:textColor="#000000"/>
+
+    <ListView
+            android:id="@+id/foundList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="5"
+            android:minHeight="100dp"
+            android:padding="5dp"
+            android:textColor="#000000"/>
+
+    <TextView
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@mipmap/textview"
+            android:padding="5dp"
+            android:text="@string/遗失的物品"
+            android:textColor="#000000"/>
+
+    <ListView
+            android:id="@+id/missingList"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="5"
+            android:minHeight="100dp"
+            android:padding="5dp"
+            android:textColor="#000000"/>
+
+</LinearLayout>
