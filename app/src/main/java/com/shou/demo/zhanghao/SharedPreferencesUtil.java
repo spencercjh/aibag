@@ -236,7 +236,7 @@ public class SharedPreferencesUtil {
         Set<Map.Entry<String, JsonElement>> entrySet = obj.entrySet();
         for (Map.Entry<String, JsonElement> entry : entrySet) {
             String entryKey = entry.getKey();
-            JsonObject value = (JsonObject) entry.getValue();
+            JsonElement value = entry.getValue();
             map.put(entryKey, gson.fromJson(value, clsV));
         }
         Log.e("SharedPreferencesUtil", obj.toString());

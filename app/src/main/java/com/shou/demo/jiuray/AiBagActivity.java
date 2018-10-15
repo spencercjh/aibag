@@ -79,8 +79,8 @@ public class AiBagActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_aiBag);
-        Objects.requireNonNull(getSupportActionBar()).setDisplayShowTitleEnabled(false);
+        setContentView(R.layout.activity_aibag);
+//        Objects.requireNonNull(getSupportActionBar()).setDisplayShowTitleEnabled(false);
         //设置消息监听
         ConnectedThread.setHandler(mHandler);
         // 获取UI控件
@@ -193,6 +193,7 @@ public class AiBagActivity extends AppCompatActivity {
      * 初始化toolbar功能按键打开的dialog大菜单
      */
     private void initDialogButton(View dialogView) {
+        SharedPreferencesUtil.getInstance(this, "record");
         Button registerButton = dialogView.findViewById(R.id.button_register);
         Button manualCheckButton = dialogView.findViewById(R.id.button_manual_check);
         Button scheduleCheckButton = dialogView.findViewById(R.id.button_schedule_check);
@@ -224,8 +225,12 @@ public class AiBagActivity extends AppCompatActivity {
     }
 
     private void save() {
-        SharedPreferencesUtil.putHashMapData("records", presentRecords);
-        Toast.makeText(AiBagActivity.this, "保存成功", Toast.LENGTH_LONG).show();
+        if (presentRecords.size() == 0) {
+            Toast.makeText(AiBagActivity.this, "当前没有扫描到任何物品", Toast.LENGTH_SHORT).show();
+        } else {
+            SharedPreferencesUtil.putHashMapData("records", presentRecords);
+            Toast.makeText(AiBagActivity.this, "保存成功", Toast.LENGTH_LONG).show();
+        }
     }
 
     /**
@@ -583,8 +588,8 @@ public class AiBagActivity extends AppCompatActivity {
                     epcTag.setCount(1);
                     epcTag.setPc(pc);
                     epcTag.setRssi(rssi);
-                    epcTag.setNote(epcNotes.getString(epc, ""));
-                    presentRecords.put(epc, epcNotes.getString(epc, ""));
+                    epcTag.setNote(epcNotes.getString(epc, epc));
+                    presentRecords.put(epc, epcNotes.getString(epc, epc));
                     list.add(epcTag);
                 } else {
                     for (int i = 0; i < list.size(); i++) {
@@ -594,8 +599,8 @@ public class AiBagActivity extends AppCompatActivity {
                             mEPC.setCount(mEPC.getCount() + 1);
                             mEPC.setRssi(rssi);
                             mEPC.setPc(pc);
-                            mEPC.setNote(epcNotes.getString(epc, ""));
-                            presentRecords.put(epc, epcNotes.getString(epc, ""));
+                            mEPC.setNote(epcNotes.getString(epc, epc));
+                            presentRecords.put(epc, epcNotes.getString(epc, epc));
                             list.set(i, mEPC);
                             break;
                         } else if (i == (list.size() - 1)) {
@@ -605,8 +610,8 @@ public class AiBagActivity extends AppCompatActivity {
                             newEPC.setCount(1);
                             newEPC.setPc(pc);
                             newEPC.setRssi(rssi);
-                            newEPC.setNote(epcNotes.getString(epc, ""));
-                            presentRecords.put(epc, epcNotes.getString(epc, ""));
+                            newEPC.setNote(epcNotes.getString(epc, epc));
+                            presentRecords.put(epc, epcNotes.getString(epc, epc));
                             list.add(newEPC);
                         }
                     }

@@ -11,8 +11,6 @@ import com.shou.demo.R;
 import com.shou.demo.jiuray.BluetoothActivity;
 import com.shou.demo.zhenronglife.util.SharedPreferencesUtils;
 import com.shou.demo.zhenronglife.widget.LoadingDialog;
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.codec.digest.DigestUtils;
 
 /**
  * 登录界面
@@ -279,7 +277,7 @@ public class LoginActivity extends Activity
             helper.putValues(
                     new SharedPreferencesUtils.ContentValue("remenberPassword", true),
                     new SharedPreferencesUtils.ContentValue("autoLogin", true),
-                    new SharedPreferencesUtils.ContentValue("password", new String(Hex.encodeHex(DigestUtils.md5(getPassword())))));
+                    new SharedPreferencesUtils.ContentValue("password", getPassword()));
         } else if (!checkboxPassword.isChecked()) { //如果没有保存密码，那么自动登录也是不选的
             //创建记住密码和自动登录是默认不选,密码为空
             helper.putValues(
@@ -291,7 +289,7 @@ public class LoginActivity extends Activity
             helper.putValues(
                     new SharedPreferencesUtils.ContentValue("remenberPassword", true),
                     new SharedPreferencesUtils.ContentValue("autoLogin", false),
-                    new SharedPreferencesUtils.ContentValue("password", new String(Hex.encodeHex(DigestUtils.md5(getPassword())))));
+                    new SharedPreferencesUtils.ContentValue("password", getPassword()));
         }
     }
 
