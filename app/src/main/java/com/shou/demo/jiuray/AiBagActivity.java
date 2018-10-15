@@ -274,16 +274,18 @@ public class AiBagActivity extends AppCompatActivity {
      * 比较方法
      */
     private boolean compare() {
+        boolean same = true;
         Map<String, String> savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
         if (savedRecords.size() != presentRecords.size()) {
-            return false;
+            same = false;
         }
         for (Map.Entry<String, String> record : savedRecords.entrySet()) {
-            if (!savedRecords.entrySet().contains(record)) {
+            if (!presentRecords.entrySet().contains(record)) {
                 Map<String, String> missingRecords = new HashMap<>(2);
                 missingRecords.put("EPC", record.getKey());
                 missingRecords.put("NOTE", record.getValue());
                 missingItems.add(missingRecords);
+                same = false;
             } else {
                 Map<String, String> inBagRecords = new HashMap<>(2);
                 inBagRecords.put("EPC", record.getKey());
@@ -291,7 +293,7 @@ public class AiBagActivity extends AppCompatActivity {
                 foundItems.add(inBagRecords);
             }
         }
-        return true;
+        return same;
     }
 
     /**
