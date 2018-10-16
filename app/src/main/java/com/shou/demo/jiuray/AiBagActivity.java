@@ -2,8 +2,12 @@ package com.shou.demo.jiuray;
 
 import android.annotation.SuppressLint;
 import android.app.AlertDialog;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -31,6 +35,9 @@ import java.util.*;
  */
 @SuppressWarnings({"AlibabaAvoidManuallyCreateThread", "AlibabaAvoidCommentBehindStatement"})
 public class AiBagActivity extends AppCompatActivity {
+
+    private NotificationManager notificationManager;
+    private Notification notification;
 
     private SharedPreferences epcNotes;
     private SharedPreferences.Editor epcNotesEditor;
@@ -246,8 +253,10 @@ public class AiBagActivity extends AppCompatActivity {
         boolean compareResult = compare();
         if (compareResult) {
             Toast.makeText(getApplicationContext(), "记录保持一致", Toast.LENGTH_SHORT).show();
+            initNotification(false);
         } else {
             Toast.makeText(getApplicationContext(), "记录不一致", Toast.LENGTH_SHORT).show();
+            initNotification(true);
         }
         final AlertDialog.Builder compareResultDialog = new AlertDialog.Builder(AiBagActivity.this);
         compareResultDialog.setIcon(R.mipmap.icon_item);
@@ -268,6 +277,22 @@ public class AiBagActivity extends AppCompatActivity {
             }
         });
         compareResultDialog.show();
+    }
+
+    private void initNotification(boolean missing) {
+        Bitmap LargeBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.icon_edit);
+        notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        Notification.Builder mBuilder = new Notification.Builder(this);
+        mBuilder.setContentTitle("智能书包")
+                .setContentText(missing ? "物品有遗失！" : "所有物品安好")
+                .setTicker("智能书包：物品扫描结果")
+                .setWhen(System.currentTimeMillis())
+                .setSmallIcon(R.mipmap.icon_edit)
+                .setLargeIcon(LargeBitmap)
+                .setDefaults(Notification.DEFAULT_LIGHTS | Notification.DEFAULT_VIBRATE)
+                .setAutoCancel(true);
+        notification = mBuilder.build();
+        notificationManager.notify(1, notification);
     }
 
     /**
@@ -343,9 +368,7 @@ public class AiBagActivity extends AppCompatActivity {
                 timeDialog.setPositiveButton("确定", new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface timeDialog, int which) {
-                        System.out.println("#####################     " + calendar[0].getTime());
                         final long delayTime = calendar[0].getTime().getTime() - System.currentTimeMillis();
-                        System.out.println("DELAYTIME    " + delayTime);
                         if (delayTime <= 0) {
                             Toast.makeText(AiBagActivity.this, "请不要选择过去的时间！", Toast.LENGTH_SHORT).show();
                             return;
@@ -540,8 +563,6 @@ public class AiBagActivity extends AppCompatActivity {
                             }
 
                         }
-
-
                     } catch (Exception e) {
                         // TODO Auto-generated catch block
                         isRunning = false;
