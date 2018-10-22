@@ -242,4 +242,22 @@ public class SharedPreferencesUtil {
         Log.e("SharedPreferencesUtil", obj.toString());
         return map;
     }
+
+    /**
+     * 删除键值
+     *
+     * @param key key
+     * @return result
+     */
+    public static boolean deleteData(String key) {
+        SharedPreferences.Editor editor = sp.edit();
+        try {
+            editor.remove(key);
+            editor.apply();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

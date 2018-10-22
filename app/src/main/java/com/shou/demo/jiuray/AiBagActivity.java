@@ -52,6 +52,8 @@ public class AiBagActivity extends AppCompatActivity {
     private RadioButton rbSingle;
     private RadioButton rbLoop;
     private ListView listViewTag;
+
+    private boolean allClear = false;
     /**
      * 超高频指令管理者
      */
@@ -110,6 +112,8 @@ public class AiBagActivity extends AppCompatActivity {
         //初始化声音池
         Util.initSoundPool(this);
         epcNotes = getSharedPreferences("note", MODE_PRIVATE);
+        //初始化SharedPreference
+        SharedPreferencesUtil.getInstance(this, "record");
     }
 
     /**
@@ -175,10 +179,7 @@ public class AiBagActivity extends AppCompatActivity {
         buttonClear.setOnClickListener(new OnClickListener() {
             @Override
             public void onClick(View arg0) {
-                editCountTag.setText("");
-                listEPC.removeAll(listEPC);
-                listViewTag.setAdapter(null);
-
+                clear();
             }
         });
         /* toolbar上的功能按键 */
@@ -197,10 +198,23 @@ public class AiBagActivity extends AppCompatActivity {
     }
 
     /**
+     * 清空所有的集合，删除存储过的记录，作好全空标记
+     */
+    private void clear() {
+        editCountTag.setText("");
+        listEPC.removeAll(listEPC);
+        listViewTag.setAdapter(null);
+        presentRecords.clear();
+        foundItems.clear();
+        missingItems.clear();
+        SharedPreferencesUtil.deleteData("records");
+        allClear = true;
+    }
+
+    /**
      * 初始化toolbar功能按键打开的dialog大菜单
      */
     private void initDialogButton(View dialogView) {
-        SharedPreferencesUtil.getInstance(this, "record");
         Button registerButton = dialogView.findViewById(R.id.button_register);
         Button manualCheckButton = dialogView.findViewById(R.id.button_manual_check);
         Button scheduleCheckButton = dialogView.findViewById(R.id.button_schedule_check);
@@ -255,8 +269,13 @@ public class AiBagActivity extends AppCompatActivity {
             Toast.makeText(getApplicationContext(), "记录保持一致", Toast.LENGTH_SHORT).show();
             initNotification(false);
         } else {
-            Toast.makeText(getApplicationContext(), "记录不一致", Toast.LENGTH_SHORT).show();
-            initNotification(true);
+            if (allClear) {
+                Toast.makeText(getApplicationContext(), "没有注册记录", Toast.LENGTH_SHORT).show();
+                return;
+            } else {
+                Toast.makeText(getApplicationContext(), "记录不一致", Toast.LENGTH_SHORT).show();
+                initNotification(true);
+            }
         }
         final AlertDialog.Builder compareResultDialog = new AlertDialog.Builder(AiBagActivity.this);
         compareResultDialog.setIcon(R.mipmap.icon_item);
@@ -280,7 +299,7 @@ public class AiBagActivity extends AppCompatActivity {
     }
 
     private void initNotification(boolean missing) {
-        Bitmap LargeBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.icon_edit);
+        Bitmap largeBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.icon_edit);
         notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         Notification.Builder mBuilder = new Notification.Builder(this);
         mBuilder.setContentTitle("智能书包")
@@ -288,7 +307,7 @@ public class AiBagActivity extends AppCompatActivity {
                 .setTicker("智能书包：物品扫描结果")
                 .setWhen(System.currentTimeMillis())
                 .setSmallIcon(R.mipmap.icon_edit)
-                .setLargeIcon(LargeBitmap)
+                .setLargeIcon(largeBitmap)
                 .setDefaults(Notification.DEFAULT_LIGHTS | Notification.DEFAULT_VIBRATE)
                 .setAutoCancel(true);
         notification = mBuilder.build();
@@ -299,8 +318,22 @@ public class AiBagActivity extends AppCompatActivity {
      * 比较方法
      */
     private boolean compare() {
+        if (allClear) {
+            return false;
+        }
         boolean same = true;
-        Map<String, String> savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
+        //防止找到物品和遗失物品列表出现重复
+        missingItems.clear();
+        foundItems.clear();
+        Map<String, String> savedRecords;
+        try {
+            savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
+        } catch (Exception e) {
+            //捕获到异常即说明找不到记录
+            e.printStackTrace();
+            allClear = true;
+            return false;
+        }
         if (savedRecords.size() != presentRecords.size()) {
             same = false;
         }
@@ -422,7 +455,9 @@ public class AiBagActivity extends AppCompatActivity {
         }
     }
 
-    // 读标签
+    /**
+     * 读标签
+     */
     class ButtonReadTagListener implements OnClickListener {
         @Override
         public void onClick(View v) {
