@@ -209,6 +209,7 @@ public class AiBagActivity extends AppCompatActivity {
         missingItems.clear();
         SharedPreferencesUtil.deleteData("records");
         allClear = true;
+        Toast.makeText(AiBagActivity.this, "清除成功", Toast.LENGTH_SHORT).show();
     }
 
     /**
@@ -249,8 +250,9 @@ public class AiBagActivity extends AppCompatActivity {
         if (presentRecords.size() == 0) {
             Toast.makeText(AiBagActivity.this, "当前没有扫描到任何物品", Toast.LENGTH_SHORT).show();
         } else {
+            allClear = false;
             SharedPreferencesUtil.putHashMapData("records", presentRecords);
-            Toast.makeText(AiBagActivity.this, "保存成功", Toast.LENGTH_LONG).show();
+            Toast.makeText(AiBagActivity.this, "保存成功", Toast.LENGTH_SHORT).show();
         }
     }
 
