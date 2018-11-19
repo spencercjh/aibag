@@ -52,7 +52,6 @@ public class ConnectThread extends Thread {
             }
             socket.connect();
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             System.out.println(e.toString());
             handler.sendEmptyMessage(CONNECT_FAIL);
             socket = null;

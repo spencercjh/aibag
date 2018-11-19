@@ -68,14 +68,12 @@ public class BluetoothActivity extends Activity {
     private String tag = "BluetoothActivity ";
 
     private BroadcastReceiver mReceiver;
-    private MyActivityManager manager;
 
     @SuppressLint("HandlerLeak")
     private Handler mHandler = new Handler() {
 
         @Override
         public void handleMessage(Message msg) {
-            // TODO Auto-generated method stub
             switch (msg.what) {
                 case FOUND_DEVICE:
                     foundList.setAdapter(new MyAdapter(BluetoothActivity.this,
@@ -233,7 +231,6 @@ public class BluetoothActivity extends Activity {
 
             @Override
             public void onReceive(Context arg0, Intent arg1) {
-                // TODO Auto-generated method stub
                 String actionStr = arg1.getAction();
                 Log.e("actionStr", actionStr);
                 if (actionStr.equals(BluetoothDevice.ACTION_FOUND)) {
@@ -331,7 +328,6 @@ public class BluetoothActivity extends Activity {
             @Override
             public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,
                                     long arg3) {
-                // TODO Auto-generated method stub
                 BluetoothDevice device = bondedDevices.get(arg2);
                 connect(device);
             }
@@ -341,7 +337,6 @@ public class BluetoothActivity extends Activity {
             @Override
             public void onItemClick(AdapterView<?> arg0, View arg1, int arg2,
                                     long arg3) {
-                // TODO Auto-generated method stub
                 BluetoothDevice device = foundDevices.get(arg2);
                 connect(device);
 
@@ -355,7 +350,6 @@ public class BluetoothActivity extends Activity {
 
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        // TODO Auto-generated method stub
                         btAdapter.cancelDiscovery();
                     }
                 });
@@ -428,7 +422,6 @@ public class BluetoothActivity extends Activity {
                 try {
                     socket.close();
                 } catch (IOException e) {
-                    // TODO Auto-generated catch block
                     e.printStackTrace();
                 }
             }
@@ -445,7 +438,6 @@ public class BluetoothActivity extends Activity {
      */
     @Override
     protected void onDestroy() {
-        // TODO Auto-generated method stub
         super.onDestroy();
         //取消注册
         if (mReceiver != null) {
@@ -463,7 +455,6 @@ public class BluetoothActivity extends Activity {
             try {
                 socket.close();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }

@@ -55,7 +55,6 @@ public class ConnectedThread extends Thread {
                 os = socket.getOutputStream();
                 Log.i(TAG, "连接成功");
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
             while (!isStop) {
@@ -66,7 +65,6 @@ public class ConnectedThread extends Thread {
 //			is.available();
             }
         } catch (Exception e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             Log.i(TAG, "连接已断开");
             byte[] temp = "连接已断开".getBytes();
@@ -83,7 +81,6 @@ public class ConnectedThread extends Thread {
             try {
                 is.close();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
@@ -91,7 +88,6 @@ public class ConnectedThread extends Thread {
             try {
                 os.close();
             } catch (IOException e) {
-                // TODO Auto-generated catch block
                 e.printStackTrace();
             }
         }
@@ -112,7 +108,6 @@ public class ConnectedThread extends Thread {
             os = socket.getOutputStream();
             os.write(buf);
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
 

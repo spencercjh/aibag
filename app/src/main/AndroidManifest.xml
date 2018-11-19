@@ -28,6 +28,10 @@
         </activity>
         <activity android:name=".jiuray.ScheduleCheckActivity">
         </activity>
+        <activity android:name=".jiuray.SetDateActivity">
+        </activity>
+        <activity android:name=".jiuray.SetTimeActivity">
+        </activity>
     </application>
 
 </manifest>

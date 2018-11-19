@@ -43,7 +43,6 @@ public class AcceptThread extends Thread {
             socket = serverSocket.accept();
             System.out.println("接收远程蓝牙连接成功");
         } catch (IOException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
             System.out.println("接收远程蓝牙连接失败");
             socket = null;
