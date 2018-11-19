@@ -1,5 +1,6 @@
 package com.shou.demo.jiuray;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
@@ -23,7 +24,10 @@ import com.shou.demo.jiuray.bluetooth.ConnectedThread;
 import com.shou.demo.jiuray.command.MyAdapter;
 
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 
 /**
  * 我写的代码有我自己的风格，一看便知……蓝牙设备提供方的代码真是惨不忍睹，毕竟15年eclipse开发的……
@@ -34,48 +38,39 @@ public class BluetoothActivity extends Activity {
     private BluetoothAdapter btAdapter;
 
     // 消息处理器使用的常量
-    private static final int FOUND_DEVICE = 1; // 发现设备
-    private static final int START_DISCOVERY = 2; // 开始查找设备
-    private static final int FINISH_DISCOVERY = 3; // 结束查找设备
-    private static final int CONNECT_FAIL = 4; // 连接失败
-    private static final int CONNECT_SUCCEED_P = 5; // 主动连接成功
-    private static final int CONNECT_SUCCEED_N = 6; // 收到连接成功
-    private static final int RECEIVE_MSG = 7; // 收到消息
-    private static final int SEND_MSG = 8; // 发送消息
-    public static final int CONNECT_INTERRUPT = 101; //连接中断
+    private static final int FOUND_DEVICE = 1;
+    private static final int START_DISCOVERY = 2;
+    private static final int FINISH_DISCOVERY = 3;
+    private static final int CONNECT_FAIL = 4;
+    private static final int CONNECT_SUCCEED_P = 5;
+    private static final int CONNECT_SUCCEED_N = 6;
+    private static final int RECEIVE_MSG = 7;
+    private static final int SEND_MSG = 8;
+    public static final int CONNECT_INTERRUPT = 101;
 
-    ConnectedThread connectedThread; // 与远程蓝牙连接成功时启动
-    ConnectThread connectThread; // 用户点击列表中某一项，要与远程蓝牙连接时启动
-    AcceptThread acceptThread;
+    private ConnectedThread connectedThread;
+    private ConnectThread connectThread;
+    private AcceptThread acceptThread;
 
-    // 连接设备对话框相关控件
     private Dialog dialog;
     private ProgressBar discoveryPro;
     private ListView foundList;
-    List<BluetoothDevice> foundDevices;
-
-    //UI控件
-    ListView LvMain;
-    private ArrayList<HashMap<String, String>> arrayMenu;
-    private static ArrayList<String> deviceList = new ArrayList<String>();
-    private SimpleAdapter adapter;
+    private List<BluetoothDevice> foundDevices;
 
     private TextView textTitle;
 
-    public static boolean connFlag = false;
-    BluetoothSocket socket;
+    static boolean connFlag = false;
+    private BluetoothSocket socket;
 
     private final int REQUEST_OPEN_BT = 101;
 
 
-    private String TAG = "BluetoothActivity ";//debug
+    private String tag = "BluetoothActivity ";
 
-    //广播接受者，监听蓝牙状态信息
     private BroadcastReceiver mReceiver;
-    //用于退出关闭Activity
     private MyActivityManager manager;
 
-    // 消息处理器..日理万鸡的赶脚...
+    @SuppressLint("HandlerLeak")
     private Handler mHandler = new Handler() {
 
         @Override
@@ -99,7 +94,7 @@ public class BluetoothActivity extends Activity {
                     break;
                 case CONNECT_SUCCEED_P:
                 case CONNECT_SUCCEED_N:
-                    Log.i(TAG, "连接成功-----");
+                    Log.i(tag, "连接成功-----");
                     if (msg.what == CONNECT_SUCCEED_P) {
                         //接受线程不为Null
                         if (acceptThread != null) {
@@ -141,12 +136,7 @@ public class BluetoothActivity extends Activity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_bluetooth);
-        /*manager = (MyActivityManager) getApplication();
-        manager.addActivity(this);*/
-        // 初始控件
         initView();
-
-        // 注册广播接收者
         registerBroadReceiver();
 
     }
@@ -169,25 +159,47 @@ public class BluetoothActivity extends Activity {
     private void initView() {
         textTitle = findViewById(R.id.textView_title);
         textTitle.setText("未连接设备");
-        arrayMenu = new ArrayList<>();
-
-        LvMain = findViewById(R.id.mainLv);
-
-        // 初始化arrayMenu
-        String[] array = {"连接设备", "断开设备", "智能书包", "退出"};
-        for (String anArray : array) {
-            HashMap<String, String> item = new HashMap<>(3);
-            item.put("menuItem", anArray);
-            arrayMenu.add(item);
-        }
-
-        adapter = new SimpleAdapter(this, arrayMenu, // 数据源
-                R.layout.mainlv_items,// ListItem的XML实现
-                new String[]{"menuItem"}, // 动态数组与Item对应的子项
-                new int[]{R.id.TvMenu // 子项的id定义
-                });
-        LvMain.setAdapter(adapter);
-        LvMain.setOnItemClickListener(new LvMainItemClickListener());
+        Button connect = findViewById(R.id.button_connect_device);
+        Button disconnect = findViewById(R.id.button_disconnet_device);
+        Button aiBag = findViewById(R.id.button_ai_bag);
+        connect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (connFlag) {
+                    Toast.makeText(getApplicationContext(), "请先断开连接，再连接", Toast.LENGTH_SHORT).show();
+                } else {
+                    //连接蓝牙设备
+                    connectBluetooth();
+                }
+            }
+        });
+        disconnect.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (connFlag) {
+                    textTitle.setText("已断开连接");
+                    connFlag = false;
+                    if (socket != null) {
+                        try {
+                            socket.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        });
+        aiBag.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (connFlag) {
+                    Intent inventoryIntent = new Intent(BluetoothActivity.this, GuideActivity.class);
+                    startActivity(inventoryIntent);
+                } else {
+                    Toast.makeText(getApplicationContext(), "请先进行连接", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     /**
@@ -391,55 +403,6 @@ public class BluetoothActivity extends Activity {
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
-    }
-
-    class LvMainItemClickListener implements OnItemClickListener {
-
-        @Override
-        public void onItemClick(AdapterView<?> adapter, View view, int position,
-                                long id) {
-            HashMap<String, String> item = (HashMap<String, String>) LvMain.getItemAtPosition(position);
-            String itemStr = item.get("menuItem");
-
-            if ("连接设备".equals(itemStr)) {
-                if (connFlag) {
-                    Toast.makeText(getApplicationContext(), "请先断开连接，再连接", Toast.LENGTH_SHORT).show();
-                } else {
-                    //连接蓝牙设备
-                    connectBluetooth();
-                }
-
-
-            }
-            if ("断开设备".equals(itemStr)) {
-                if (connFlag) {
-                    textTitle.setText("已断开连接");
-                    connFlag = false;
-                    if (socket != null) {
-                        try {
-                            //关闭蓝牙连接
-                            socket.close();
-                        } catch (IOException e) {
-                            // TODO Auto-generated catch block
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            } else if ("智能书包".equals(itemStr)) {
-                if (connFlag) {
-                    //读标签操作
-                    Intent inventoryIntent = new Intent(BluetoothActivity.this, AiBagActivity.class);
-                    startActivity(inventoryIntent);
-                } else {
-                    Toast.makeText(getApplicationContext(), "请先进行连接", Toast.LENGTH_SHORT);
-                    return;
-                }
-            } else if ("退出".equals(itemStr)) {
-                finish();
-                Runtime.getRuntime().exit(0);//结束程序
-            }
-        }
-
     }
 
     @Override

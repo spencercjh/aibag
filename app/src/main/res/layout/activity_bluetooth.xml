@@ -1,14 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:layout_width="fill_parent"
-    android:layout_height="fill_parent"
-    android:orientation="vertical" >
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
+              android:orientation="vertical">
     <include layout="@layout/title"/>
-    
-    <ListView 
-        android:id="@+id/mainLv"
-        android:layout_height="wrap_content"
-        android:layout_width="fill_parent"
-        android:scrollbars="vertical" />
-    
+    <Button
+            android:text="连接设备"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/button_connect_device"
+            android:layout_marginTop="50dp"/>
+    <Button
+            android:text="断开设备"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/button_disconnet_device"
+            android:layout_marginTop="50dp"/>
+    <Button
+            android:text="@string/智能书包"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:id="@+id/button_ai_bag"
+            android:layout_marginTop="50dp"/>
+
+
 </LinearLayout>

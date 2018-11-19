@@ -1,14 +1,12 @@
 package com.shou.demo.jiuray.entity;
 
+import java.util.Objects;
+
 /**
  * @author jrhuf
  */
 public class EPC {
-    private int len;
     private String epc;
-    private int count;
-    private int rssi;
-    private String pc;
     private String note;
 
     public String getNote() {
@@ -17,36 +15,6 @@ public class EPC {
 
     public void setNote(String note) {
         this.note = note;
-    }
-
-    public int getRssi() {
-        return rssi;
-    }
-
-    public void setRssi(int rssi) {
-        this.rssi = rssi;
-    }
-
-    public String getPc() {
-        return pc;
-    }
-
-    public void setPc(String pc) {
-        this.pc = pc;
-    }
-
-    /**
-     * @return the len
-     */
-    public int getLen() {
-        return len;
-    }
-
-    /**
-     * @param len the id to set
-     */
-    public void setLen(int len) {
-        this.len = len;
     }
 
     /**
@@ -63,27 +31,26 @@ public class EPC {
         this.epc = epc;
     }
 
-    /**
-     * @return the count
-     */
-    public int getCount() {
-        return count;
-    }
-
-    /**
-     * @param count the count to set
-     */
-    public void setCount(int count) {
-        this.count = count;
-    }
-
-    /* (non-Javadoc)
-     * @see java.lang.Object#toString()
-     */
     @Override
     public String toString() {
-        return "EPC [id=" + len + ", epc=" + epc + ", count=" + count + "]";
+        return "EPC [epc=" + epc + "]";
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        EPC epc1 = (EPC) o;
+        return Objects.equals(epc, epc1.epc) &&
+                Objects.equals(note, epc1.note);
+    }
 
+    @Override
+    public int hashCode() {
+        return Objects.hash(epc, note);
+    }
 }

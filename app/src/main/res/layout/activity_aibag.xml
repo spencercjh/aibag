@@ -18,106 +18,63 @@
                 android:layout_gravity="center"
                 android:text="@string/智能书包"
                 style="@style/TextAppearance.AppCompat.Widget.ActionBar.Title"/>
-        <Button
-                android:layout_width="50sp"
-                android:layout_height="50sp"
-                android:layout_gravity="right"
-                android:background="@mipmap/icon_button"
-                android:id="@+id/button_function" style="?android:attr/imageButtonStyle"/>
     </android.support.v7.widget.Toolbar>
 
     <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
+            android:layout_height="60dp">
 
         <TextView
-                android:id="@+id/textView1"
+                android:text="当前物品电子标签ID"
+                android:layout_width="16dp"
+                android:layout_height="match_parent"
+                android:id="@+id/textView5"
+                android:layout_weight="1"
+                android:gravity="center"/>
+        <TextView
+                android:text="null"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                style="@style/FontStyle"
-                android:text="@string/tag_count"/>
+                android:layout_height="match_parent"
+                android:id="@+id/textview_object_id"
+                android:layout_weight="1"
+                android:gravity="center"/>
+    </LinearLayout>
 
+    <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="60dp">
+        <TextView
+                android:text="请输入物品名称"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent"
+                android:id="@+id/textView7"
+                android:layout_weight="1"
+                android:gravity="center"/>
         <EditText
-                android:id="@+id/editText_tag_count"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:focusable="false"
-                android:inputType="number"
-                android:ems="5">
-        </EditText>
-
-        <Button
-                android:id="@+id/button_clear_data"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
+                android:inputType="textPersonName"
+                android:ems="10"
+                android:id="@+id/edit_object_name"
                 android:layout_weight="1"
-                android:text="@string/clear_data"/>
-
-    </LinearLayout>
-
-    <LinearLayout
-            android:layout_marginTop="10dp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-        <RadioGroup
-                android:id="@+id/RgInventory"
-                android:orientation="horizontal"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="5"
-        >
-
-            <RadioButton
-                    android:id="@+id/RbInventorySingle"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="2"
-                    android:text="@string/rbInventorySingle"/>
-
-            <RadioButton
-                    android:id="@+id/RbInventoryLoop"
-                    android:layout_weight="3"
-                    android:layout_height="wrap_content"
-                    android:text="@string/rbInventoryLoop"
-                    android:checked="true"/>
-
-        </RadioGroup>
-        <Button
-                android:id="@+id/button_inventory"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="2"
-                android:text="@string/inventory"/>
+                android:hint="物品名称"
+                android:gravity="center"/>
     </LinearLayout>
 
     <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-    >
-
-        <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="7"
-                android:gravity="center"
-                android:background="@color/color_epc"
-                android:textColor="@color/black"
-                android:text="@string/epc"/>
+            android:layout_height="60dp">
 
 
-        <TextView
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:textColor="@color/black"
-                android:background="@color/color_count"
-                android:text="@string/count"/>
-
+        <Button
+                android:text="添加"
+                android:layout_width="wrap_content"
+                android:layout_height="match_parent" android:id="@+id/button_add" android:layout_weight="1"/>
     </LinearLayout>
     <View
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#000000"
-    />
+            android:background="#000000"/>
     <ListView
             android:id="@+id/listView_tag"
             android:layout_width="match_parent"

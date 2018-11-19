@@ -13,15 +13,15 @@ import android.os.Handler;
 import android.os.Looper;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.KeyEvent;
-import android.view.LayoutInflater;
-import android.view.View;
+import android.view.*;
 import android.view.View.OnClickListener;
 import android.widget.*;
-import android.widget.CompoundButton.OnCheckedChangeListener;
 import com.shou.demo.R;
 import com.shou.demo.jiuray.bluetooth.ConnectedThread;
-import com.shou.demo.jiuray.command.*;
+import com.shou.demo.jiuray.command.CommandThread;
+import com.shou.demo.jiuray.command.InventoryInfo;
+import com.shou.demo.jiuray.command.NewSendCommendManager;
+import com.shou.demo.jiuray.command.Tools;
 import com.shou.demo.jiuray.entity.EPC;
 import com.shou.demo.zhanghao.SharedPreferencesUtil;
 
@@ -36,41 +36,28 @@ import java.util.*;
 @SuppressWarnings({"AlibabaAvoidManuallyCreateThread", "AlibabaAvoidCommentBehindStatement"})
 public class AiBagActivity extends AppCompatActivity {
 
-    private NotificationManager notificationManager;
-    private Notification notification;
-
+    private static final int READ_TAG = 2001;
+    SimpleAdapter simpleAdapter;
+    private ListView listViewTag;
+    private TextView objectId;
+    private EditText inputObjectName;
+    private Button addObject;
     private SharedPreferences epcNotes;
     private SharedPreferences.Editor epcNotesEditor;
-    /**
-     * UI控件
-     */
-    private EditText editCountTag;
-    private Button buttonClear;
-    private Button buttonReadTag;
-    private Button toolbarButton;
-    private RadioGroup radioGroup;
-    private RadioButton rbSingle;
-    private RadioButton rbLoop;
-    private ListView listViewTag;
-
     private boolean allClear = false;
-    /**
-     * 超高频指令管理者
-     */
-    private NewSendCommendManager manager;
-
+    private boolean isRunning = true;
+    private boolean isSend = false;
     private boolean isSingleRead = false;
-
-    private String TAG = "AiBagActivity";
-
+    private String tag = "AiBagActivity";
     private CommandThread commthread;
-    private static final int READ_TAG = 2001;
-
+    private Vector<EPC> listEPC = new Vector<>(16);
+    private List<Map<String, Object>> listMap = new ArrayList<>(16);
+    private Map<String, String> presentRecords = new HashMap<>(16);
     @SuppressLint("HandlerLeak")
     private Handler mHandler = new Handler() {
         @Override
         public void handleMessage(android.os.Message msg) {
-            Log.i(TAG, msg.getData().getString("str"));
+            Log.i(tag, msg.getData().getString("str"));
             switch (msg.what) {
                 case BluetoothActivity.CONNECT_INTERRUPT:
                     BluetoothActivity.connFlag = false;
@@ -84,124 +71,194 @@ public class AiBagActivity extends AppCompatActivity {
         }
 
     };
+    /**
+     * 手动检查需要的2个List
+     */
+    private List<Map<String, String>> foundItems = new ArrayList<>(16);
+    private List<Map<String, String>> missingItems = new ArrayList<>(16);
+    private boolean isRecv = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_aibag);
-//        Objects.requireNonNull(getSupportActionBar()).setDisplayShowTitleEnabled(false);
-        //设置消息监听
+        epcNotes = getSharedPreferences("note", MODE_PRIVATE);
+        epcNotesEditor = getSharedPreferences("note", MODE_PRIVATE).edit();
+        initView();
+        initList();
+        initThread();
+    }
+
+    private void initList() {
+        SharedPreferencesUtil.getInstance(this, "record");
+        try {
+            Map<String, String> savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
+            for (Map.Entry<String, String> record : savedRecords.entrySet()) {
+                Map<String, Object> map = new HashMap<>(2);
+                map.put("EPC", record.getKey());
+                map.put("NOTE", record.getValue());
+                listMap.add(map);
+            }
+        } catch (NullPointerException | IllegalStateException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void initView() {
+        objectId = findViewById(R.id.textview_object_id);
+        inputObjectName = findViewById(R.id.edit_object_name);
+        addObject = findViewById(R.id.button_add);
+        listViewTag = findViewById(R.id.listView_tag);
+        simpleAdapter = new SimpleAdapter(AiBagActivity.this, listMap, R.layout.list_epc_item,
+                new String[]{"EPC", "NOTE"}, new int[]{R.id.textView_item_epc, R.id.textView_item_note});
+        listViewTag.setAdapter(simpleAdapter);
+        listViewTag.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
+                final Map<String, Object> map = listMap.get(position);
+                AlertDialog dialog = new AlertDialog.Builder(AiBagActivity.this).create();
+                Window dialogWindow = dialog.getWindow();
+                Objects.requireNonNull(dialogWindow).setGravity(Gravity.CENTER);
+                dialogWindow.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
+                dialog.setIcon(R.mipmap.bluetooth);
+                dialog.setTitle("删除记录");
+                dialog.setButton(AlertDialog.BUTTON_POSITIVE, "确认", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        epcNotesEditor.putString((String) map.get("EPC"), (String) map.get("EPC"));
+                        epcNotesEditor.apply();
+                        listMap.remove(map);
+                        simpleAdapter.notifyDataSetChanged();
+                        dialog.dismiss();
+                    }
+                });
+                dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+                dialog.show();
+            }
+        });
+        final String[] previousEpc = {""};
+        final boolean[] notAdd = {false};
+        addObject.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                notAdd[0] = false;
+                EPC searchResult = new EPC();
+                searchResult.setEpc(objectId.getText().toString().trim());
+                Iterator iterator = listEPC.iterator();
+                EPC nextEpc;
+                while (iterator.hasNext()) {
+                    EPC epc = (EPC) iterator.next();
+                    if (epc.getEpc().equals(objectId.getText().toString().trim())) {
+                        searchResult = epc;
+                        if (searchResult.getEpc().equals(previousEpc[0])) {
+                            notAdd[0] = true;
+                        }
+                        if (iterator.hasNext()) {
+                            nextEpc = (EPC) iterator.next();
+                            if (!nextEpc.equals(epc)) {
+                                objectId.setText(nextEpc.getEpc());
+                            }
+                        }
+                        break;
+                    }
+                }
+                if (!notAdd[0]) {
+                    searchResult.setNote(inputObjectName.getText().toString().trim());
+                    Map<String, Object> map = new HashMap<>(8);
+                    map.put("EPC", searchResult.getEpc());
+                    map.put("NOTE", searchResult.getNote());
+                    boolean update = false;
+                    for (int i = 0; i < listMap.size(); ++i) {
+                        Map<String, Object> objectMap = listMap.get(i);
+                        if (objectMap.get("EPC").equals(searchResult.getEpc())) {
+                            update = true;
+                            listMap.set(i, map);
+                            break;
+                        }
+                    }
+                    if (!update) {
+                        listMap.add(map);
+                    }
+                    epcNotesEditor.putString(searchResult.getEpc(), searchResult.getNote());
+                    epcNotesEditor.apply();
+                    simpleAdapter.notifyDataSetChanged();
+                    previousEpc[0] = searchResult.getEpc();
+                    inputObjectName.setText("");
+                } else {
+                    searchResult.setNote(inputObjectName.getText().toString().trim());
+                    Map<String, Object> map = new HashMap<>(8);
+                    map.put("EPC", searchResult.getEpc());
+                    map.put("NOTE", searchResult.getNote());
+                    boolean update = false;
+                    for (int i = 0; i < listMap.size(); ++i) {
+                        Map<String, Object> objectMap = listMap.get(i);
+                        if (objectMap.get("EPC").equals(searchResult.getEpc())) {
+                            update = true;
+                            listMap.set(i, map);
+                            simpleAdapter.notifyDataSetChanged();
+                            inputObjectName.setText("");
+                            epcNotesEditor.putString(searchResult.getEpc(), searchResult.getNote());
+                            epcNotesEditor.apply();
+                            break;
+                        }
+                    }
+                    if (!update) {
+                        Toast.makeText(AiBagActivity.this, "已注册", Toast.LENGTH_SHORT).show();
+                    }
+                }
+            }
+        });
+    }
+
+    private void initThread() {
         ConnectedThread.setHandler(mHandler);
-        // 获取UI控件
-        this.initUI();
-        // 监听
-        this.listener();
-        // 获取蓝牙输入输出流
-        // 蓝牙连接输入输出流
         InputStream inputStream = ConnectedThread.getSocketInoutStream();
         OutputStream outputStream = ConnectedThread.getSocketOutoutStream();
-        manager = new NewSendCommendManager(inputStream, outputStream);
+        NewSendCommendManager manager = new NewSendCommendManager(inputStream, outputStream);
         new RecvThread().start();
         try {
             Thread.sleep(500);
         } catch (InterruptedException e) {
-            // TODO Auto-generated catch block
             e.printStackTrace();
         }
         new SendCmdThread().start();
-        //初始化声音池
-        Util.initSoundPool(this);
-        epcNotes = getSharedPreferences("note", MODE_PRIVATE);
-        //初始化SharedPreference
-        SharedPreferencesUtil.getInstance(this, "record");
-    }
-
-    /**
-     * 获取UI控件
-     */
-    private void initUI() {
-        editCountTag = findViewById(R.id.editText_tag_count);
-        buttonClear = findViewById(R.id.button_clear_data);
-        buttonReadTag = findViewById(R.id.button_inventory);
-        radioGroup = findViewById(R.id.RgInventory);
-        rbSingle = findViewById(R.id.RbInventorySingle);
-        rbLoop = findViewById(R.id.RbInventoryLoop);
-        listViewTag = findViewById(R.id.listView_tag);
-        toolbarButton = findViewById(R.id.button_function);
+        if (isSend) {
+            isSend = false;
+            try {
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            isRecv = false;
+        } else {
+            isSend = true;
+            isRecv = true;
+        }
     }
 
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
-            boolean isRuning = false;
             if (commthread != null) {
                 commthread.interrupt();
             }
             isRecv = false;
             isSend = false;
-            isRuning = false;
             isRunning = false;
         }
         return super.onKeyDown(keyCode, event);
     }
 
     /**
-     * 监听UI
-     */
-    private void listener() {
-        rbSingle.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView,
-                                         boolean isChecked) {
-                if (isChecked) {
-                    isSingleRead = true;
-                    isSend = false;
-                    isRecv = false;
-                    buttonReadTag.setText("读标签");
-                    Log.i(TAG, "isSingle --- >" + isSingleRead);
-                }
-            }
-        });
-        rbLoop.setOnCheckedChangeListener(new OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView,
-                                         boolean isChecked) {
-                if (isChecked) {
-                    isSingleRead = false;
-
-                    Log.i(TAG, "isLoop --- >" + isSingleRead);
-                }
-            }
-        });
-        // 读标签
-        buttonReadTag.setOnClickListener(new ButtonReadTagListener());
-        //清空
-        buttonClear.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View arg0) {
-                clear();
-            }
-        });
-        /* toolbar上的功能按键 */
-        toolbarButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                final AlertDialog.Builder functionMenuDialog = new AlertDialog.Builder(AiBagActivity.this);
-                functionMenuDialog.setIcon(R.mipmap.icon_item);
-                functionMenuDialog.setTitle("智能书包相关功能");
-                View dialogView = LayoutInflater.from(AiBagActivity.this).inflate(R.layout.dialog_menu, null);
-                functionMenuDialog.setView(dialogView);
-                initDialogButton(dialogView);
-                functionMenuDialog.show();
-            }
-        });
-    }
-
-    /**
      * 清空所有的集合，删除存储过的记录，作好全空标记
      */
+    @SuppressWarnings("CollectionAddedToSelf")
     private void clear() {
-        editCountTag.setText("");
         listEPC.removeAll(listEPC);
         listViewTag.setAdapter(null);
         presentRecords.clear();
@@ -257,12 +314,6 @@ public class AiBagActivity extends AppCompatActivity {
     }
 
     /**
-     * 手动检查需要的2个List
-     */
-    private List<Map<String, String>> foundItems = new ArrayList<>(16);
-    private List<Map<String, String>> missingItems = new ArrayList<>(16);
-
-    /**
      * 手动检查
      */
     private void initManualCheck() {
@@ -302,7 +353,7 @@ public class AiBagActivity extends AppCompatActivity {
 
     private void initNotification(boolean missing) {
         Bitmap largeBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.icon_edit);
-        notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        NotificationManager notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
         Notification.Builder mBuilder = new Notification.Builder(this);
         mBuilder.setContentTitle("智能书包")
                 .setContentText(missing ? "物品有遗失！" : "所有物品安好")
@@ -312,8 +363,8 @@ public class AiBagActivity extends AppCompatActivity {
                 .setLargeIcon(largeBitmap)
                 .setDefaults(Notification.DEFAULT_LIGHTS | Notification.DEFAULT_VIBRATE)
                 .setAutoCancel(true);
-        notification = mBuilder.build();
-        notificationManager.notify(1, notification);
+        Notification notification = mBuilder.build();
+        Objects.requireNonNull(notificationManager).notify(1, notification);
     }
 
     /**
@@ -435,6 +486,82 @@ public class AiBagActivity extends AppCompatActivity {
     }
 
     /**
+     * 计算校验和
+     */
+    private byte checkSum(byte[] data) {
+        byte crc = 0x00;
+        // 从指令类型累加到参数最后一位
+        for (int i = 1; i < data.length - 2; i++) {
+            crc += data[i];
+        }
+        return crc;
+    }
+
+    /**
+     * 将读取的EPC添加到list;
+     */
+    private void addToList(final Vector<EPC> list, final InventoryInfo info) {
+        runOnUiThread(new Runnable() {
+            @SuppressWarnings("Duplicates")
+            @Override
+            public void run() {
+                String epc = Tools.Bytes2HexString(info.getEpc(), info.getEpc().length);
+                String pc = Tools.Bytes2HexString(info.getPc(), info.getPc().length);
+                int rssi = info.getRssi();
+                if (list.isEmpty()) {
+                    EPC epcTag = new EPC();
+                    epcTag.setEpc(epc);
+                    epcTag.setNote(epcNotes.getString(epc, epc));
+                    presentRecords.put(epc, epcNotes.getString(epc, epc));
+                    list.add(epcTag);
+                    objectId.setText(epc);
+                } else {
+                    for (int i = 0; i < list.size(); i++) {
+                        EPC mEPC = list.get(i);
+                        if (epc.equals(mEPC.getEpc())) {
+                            mEPC.setNote(epcNotes.getString(epc, epc));
+                            presentRecords.put(epc, epcNotes.getString(epc, epc));
+                            list.set(i, mEPC);
+                            break;
+                        } else if (i == (list.size() - 1)) {
+                            EPC newEPC = new EPC();
+                            newEPC.setEpc(epc);
+                            newEPC.setNote(epcNotes.getString(epc, epc));
+                            presentRecords.put(epc, epcNotes.getString(epc, epc));
+                            list.add(newEPC);
+                        }
+                    }
+                }
+                try {
+                    Map<String, String> savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
+                    if (presentRecords.size() > savedRecords.size()) {
+                        SharedPreferencesUtil.putHashMapData("records", presentRecords);
+                    }
+                } catch (NullPointerException | IllegalStateException e) {
+                    e.printStackTrace();
+                    SharedPreferencesUtil.putHashMapData("records", presentRecords);
+                }
+                if (!list.get(list.size() - 1).getNote().equals(list.get(list.size() - 1).getEpc())) {
+                    Map<String, Object> map = new HashMap<>(8);
+                    map.put("EPC", list.get(list.size() - 1).getEpc());
+                    map.put("NOTE", list.get(list.size() - 1).getNote());
+                    boolean add = true;
+                    for (Map<String, Object> objectMap : listMap) {
+                        if (objectMap.get("EPC").equals(list.get(list.size() - 1).getEpc())) {
+                            add = false;
+                            break;
+                        }
+                    }
+                    if (!listMap.contains(map) && add) {
+                        listMap.add(map);
+                        simpleAdapter.notifyDataSetChanged();
+                    }
+                }
+            }
+        });
+    }
+
+    /**
      * 延时线程类
      */
     class CompareScheduleThread extends Thread {
@@ -457,51 +584,6 @@ public class AiBagActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * 读标签
-     */
-    class ButtonReadTagListener implements OnClickListener {
-        @Override
-        public void onClick(View v) {
-            Log.i(TAG, "buttonReadTag click----");
-            //单次
-            if (isSingleRead) {
-                //单次读标签返回的数据
-                List<InventoryInfo> listTag = manager.inventoryRealTime();
-                if (listTag != null && !listTag.isEmpty()) {
-                    for (InventoryInfo epc : listTag) {
-                        addToList(listEPC, epc);
-                    }
-                }
-            } else {
-                //循环
-                if (isSend) {
-//					isRuning = false;
-                    isSend = false;
-                    try {
-                        Thread.sleep(500);
-                    } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
-                        e.printStackTrace();
-                    }
-                    isRecv = false;
-                    buttonReadTag.setText("读标签");
-                } else {
-//					isRuning = true;.
-                    isSend = true;
-                    isRecv = true;
-                    buttonReadTag.setText("停止");
-                }
-            }
-
-        }
-
-    }
-
-    boolean isRunning = true;  //控制发送接收线程
-    boolean isSend = false;  //控制发送指令
-
-    //发送盘存指令
     private class SendCmdThread extends Thread {
         @Override
         public void run() {
@@ -515,12 +597,11 @@ public class AiBagActivity extends AppCompatActivity {
                     } catch (IOException e) {
                         isSend = false;
                         isRunning = false;
-                        Log.e(TAG, "Socket 连接出错" + e.toString());
+                        Log.e(tag, "Socket 连接出错" + e.toString());
                     }
                     try {
                         Thread.sleep(50);
                     } catch (InterruptedException e) {
-                        // TODO Auto-generated catch block
                         e.printStackTrace();
                     }
                 }
@@ -529,19 +610,15 @@ public class AiBagActivity extends AppCompatActivity {
         }
     }
 
-    boolean isRecv = false;
-
-    //接收线程
-    @SuppressWarnings("AlibabaAvoidCommentBehindStatement")
     private class RecvThread extends Thread {
         @Override
         public void run() {
             InputStream is = ConnectedThread.getSocketInoutStream();
-            int size = 0;
+            int size;
             byte[] buffer = new byte[256];
             byte[] temp = new byte[512];
-            int index = 0;  //temp有效数据指向
-            int count = 0;  //temp有效数据长度
+            int index = 0;
+            int count = 0;
             while (isRunning) {
                 if (isRecv) {
                     try {
@@ -554,26 +631,19 @@ public class AiBagActivity extends AppCompatActivity {
                                 count = 0;
                                 Arrays.fill(temp, (byte) 0x00);
                             }
-                            //先将接收到的数据拷到temp中
                             System.arraycopy(buffer, 0, temp, index, size);
                             index = index + size;
                             if (count > 7) {
-//								Log.e(TAG, "temp: " + Tools.Bytes2HexString(temp, count));
-                                //判断AA022200
                                 if ((temp[0] == (byte) 0xAA) && (temp[1] == (byte) 0x02) && (temp[2] == (byte) 0x22) && (temp[3] == (byte) 0x00)) {
-                                    //正确数据位长度等于RSSI（1个字节）+PC（2个字节）+EPC
                                     int len = temp[4] & 0xff;
-                                    if (count < len + 7) {//数据区尚未接收完整
+                                    if (count < len + 7) {
                                         continue;
                                     }
-                                    if (temp[len + 6] != (byte) 0x8E) {//数据区尚未接收完整
+                                    if (temp[len + 6] != (byte) 0x8E) {
                                         continue;
                                     }
-                                    //得到完整数据包
                                     byte[] packageBytes = new byte[len + 7];
                                     System.arraycopy(temp, 0, packageBytes, 0, len + 7);
-//									Log.e(TAG, "packageBytes: " + Tools.Bytes2HexString(packageBytes, packageBytes.length));
-                                    //校验数据包
                                     byte crc = checkSum(packageBytes);
                                     InventoryInfo info = new InventoryInfo();
                                     if (crc == packageBytes[len + 5]) {
@@ -585,14 +655,12 @@ public class AiBagActivity extends AppCompatActivity {
                                         byte[] epcBytes = new byte[len - 5];
                                         System.arraycopy(packageBytes, 8, epcBytes, 0, len - 5);
                                         info.setEpc(epcBytes);
-                                        Util.play(1, 0);//播放提示音
                                         addToList(listEPC, info);
                                     }
                                     count = 0;
                                     index = 0;
                                     Arrays.fill(temp, (byte) 0x00);
                                 } else {
-                                    //包错误清空
                                     count = 0;
                                     index = 0;
                                     Arrays.fill(temp, (byte) 0x00);
@@ -601,135 +669,12 @@ public class AiBagActivity extends AppCompatActivity {
 
                         }
                     } catch (Exception e) {
-                        // TODO Auto-generated catch block
                         isRunning = false;
-                        Log.e(TAG, "Socket 连接出错" + e.toString());
+                        Log.e(tag, "Socket 连接出错" + e.toString());
                     }
                 }
             }
             super.run();
         }
-    }
-
-    /**
-     * 计算校验和
-     */
-    private byte checkSum(byte[] data) {
-        byte crc = 0x00;
-        // 从指令类型累加到参数最后一位
-        for (int i = 1; i < data.length - 2; i++) {
-            crc += data[i];
-        }
-        return crc;
-    }
-
-    /**
-     * EPC列表
-     */
-    private List<EPC> listEPC = new ArrayList<>();
-    private List<Map<String, Object>> listMap;
-    private Map<String, String> presentRecords = new HashMap<>(16);
-
-    /**
-     * 将读取的EPC添加到LISTVIEW
-     */
-    private void addToList(final List<EPC> list, final InventoryInfo info) {
-        runOnUiThread(new Runnable() {
-            @SuppressWarnings("Duplicates")
-            @Override
-            public void run() {
-                String epc = Tools.Bytes2HexString(info.getEpc(), info.getEpc().length);
-                String pc = Tools.Bytes2HexString(info.getPc(), info.getPc().length);
-                int rssi = info.getRssi();
-                // 第一次读入数据
-                if (list.isEmpty()) {
-                    EPC epcTag = new EPC();
-                    epcTag.setEpc(epc);
-                    epcTag.setCount(1);
-                    epcTag.setPc(pc);
-                    epcTag.setRssi(rssi);
-                    epcTag.setNote(epcNotes.getString(epc, epc));
-                    presentRecords.put(epc, epcNotes.getString(epc, epc));
-                    list.add(epcTag);
-                } else {
-                    for (int i = 0; i < list.size(); i++) {
-                        EPC mEPC = list.get(i);
-                        // list中有此EPC
-                        if (epc.equals(mEPC.getEpc())) {
-                            mEPC.setCount(mEPC.getCount() + 1);
-                            mEPC.setRssi(rssi);
-                            mEPC.setPc(pc);
-                            mEPC.setNote(epcNotes.getString(epc, epc));
-                            presentRecords.put(epc, epcNotes.getString(epc, epc));
-                            list.set(i, mEPC);
-                            break;
-                        } else if (i == (list.size() - 1)) {
-                            // list中没有此epc
-                            EPC newEPC = new EPC();
-                            newEPC.setEpc(epc);
-                            newEPC.setCount(1);
-                            newEPC.setPc(pc);
-                            newEPC.setRssi(rssi);
-                            newEPC.setNote(epcNotes.getString(epc, epc));
-                            presentRecords.put(epc, epcNotes.getString(epc, epc));
-                            list.add(newEPC);
-                        }
-                    }
-                }
-                // 将数据添加到ListView
-                listMap = new ArrayList<>();
-                int idcount = 1;
-                for (EPC epcdata : list) {
-                    Map<String, Object> map = new HashMap<>();
-                    map.put("EPC", epcdata.getEpc());
-                    map.put("PC", epcdata.getPc() + "");
-                    map.put("RSSI", epcdata.getRssi() + "dBm");
-                    map.put("COUNT", epcdata.getCount());
-                    map.put("NOTE", epcdata.getNote());
-                    idcount++;
-                    listMap.add(map);
-                }
-                editCountTag.setText("" + listEPC.size());
-                listViewTag.setAdapter(new SimpleAdapter(AiBagActivity.this,
-                        listMap, R.layout.list_epc_item, new String[]{
-                        "EPC", "PC", "RSSI", "COUNT", "NOTE"}, new int[]{
-                        R.id.textView_item_epc, R.id.textView_item_pc,
-                        R.id.textView_item_rssi, R.id.textView_item_count, R.id.textView_item_note}));
-            }
-        });
-        epcNotesEditor = getSharedPreferences("note", MODE_PRIVATE).edit();
-        listViewTag.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
-                final AlertDialog.Builder builder = new AlertDialog.Builder(AiBagActivity.this);
-                builder.setIcon(R.mipmap.icon_edit);
-                builder.setTitle("请输入标签");
-                View dialogView = LayoutInflater.from(AiBagActivity.this).inflate(R.layout.dialog_note, null);
-                builder.setView(dialogView);
-                final EditText noteEditText = dialogView.findViewById(R.id.textView_item_note);
-                builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        String note = noteEditText.getText().toString().trim();
-                        listMap.get(position).put("NOTE", note);
-                        epcNotesEditor.putString(listMap.get(position).get("EPC").toString(), note);
-                        epcNotesEditor.apply();
-                        listViewTag.setAdapter(new SimpleAdapter(AiBagActivity.this,
-                                listMap, R.layout.list_epc_item, new String[]{
-                                "EPC", "PC", "RSSI", "COUNT", "NOTE"}, new int[]{
-                                R.id.textView_item_epc, R.id.textView_item_pc,
-                                R.id.textView_item_rssi, R.id.textView_item_count, R.id.textView_item_note}));
-                        dialog.dismiss();
-                    }
-                });
-                builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                });
-                builder.show();
-            }
-        });
     }
 }
