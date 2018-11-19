@@ -7,11 +7,11 @@ import com.shou.demo.R;
 /**
  * @author spencercjh
  */
-public class CheckActivity extends AppCompatActivity {
+public class ScheduleCheckActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_check);
+        setContentView(R.layout.activity_schedule_check);
     }
 }

@@ -1,15 +1,20 @@
 package com.shou.demo.jiuray;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
-import android.content.DialogInterface;
+import android.app.Notification;
+import android.app.NotificationManager;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
-import android.view.*;
-import android.widget.*;
+import android.view.KeyEvent;
+import android.widget.ListView;
+import android.widget.SimpleAdapter;
+import android.widget.TextView;
+import android.widget.Toast;
 import com.shou.demo.R;
 import com.shou.demo.jiuray.bluetooth.ConnectedThread;
 import com.shou.demo.jiuray.command.CommandThread;
@@ -27,23 +32,20 @@ import java.util.*;
 /**
  * @author jrhuf
  */
-public class AiBagActivity extends AppCompatActivity {
+@SuppressWarnings({"AlibabaAvoidManuallyCreateThread", "AlibabaAvoidCommentBehindStatement"})
+public class ManualCheckActivity extends AppCompatActivity {
 
     private static final int READ_TAG = 2001;
-    private SimpleAdapter simpleAdapter;
-    private ListView listViewTag;
-    private TextView objectId;
-    private EditText inputObjectName;
-    private Button addObject;
-    private SharedPreferences epcNotes;
-    private SharedPreferences.Editor epcNotesEditor;
     private boolean isRunning = true;
     private boolean isSend = false;
-    private String tag = "AiBagActivity";
+    private boolean isRecv = false;
+    private NotificationManager notificationManager;
+    private Notification notification;
+    private SharedPreferences epcNotes;
+    private ListView foundList;
+    private ListView missingList;
+    private String tag = "ManualCheckActivity";
     private CommandThread commthread;
-    private Vector<EPC> listEPC = new Vector<>(16);
-    private List<Map<String, Object>> listMap = new ArrayList<>(16);
-    private Map<String, String> presentRecords = new HashMap<>(16);
     @SuppressLint("HandlerLeak")
     private Handler mHandler = new Handler() {
         @Override
@@ -54,7 +56,7 @@ public class AiBagActivity extends AppCompatActivity {
                     BluetoothActivity.connFlag = false;
                     Toast.makeText(getApplicationContext(), "连接中断", Toast.LENGTH_SHORT).show();
                     break;
-                case AiBagActivity.READ_TAG:
+                case ManualCheckActivity.READ_TAG:
                     break;
                 default:
                     break;
@@ -67,143 +69,23 @@ public class AiBagActivity extends AppCompatActivity {
      */
     private List<Map<String, String>> foundItems = new ArrayList<>(16);
     private List<Map<String, String>> missingItems = new ArrayList<>(16);
-    private boolean isRecv = false;
+    /**
+     * EPC列表
+     */
+    private Vector<EPC> listEPC = new Vector<>();
+    private List<Map<String, Object>> listMap;
+    private Map<String, String> presentRecords = new HashMap<>(16);
+    private Map<String, String> savedRecords;
+    private SimpleAdapter foundListAdapter;
+    private SimpleAdapter missingListAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_aibag);
-        epcNotes = getSharedPreferences("note", MODE_PRIVATE);
-        epcNotesEditor = getSharedPreferences("note", MODE_PRIVATE).edit();
-        SharedPreferencesUtil.getInstance(this, "record");
+        setContentView(R.layout.activity_manual_check);
         initView();
-        initList();
+        initSavedRecords();
         initThread();
-    }
-
-    private void initList() {
-        try {
-            Map<String, String> savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
-            for (Map.Entry<String, String> record : savedRecords.entrySet()) {
-                Map<String, Object> map = new HashMap<>(2);
-                map.put("EPC", record.getKey());
-                map.put("NOTE", record.getValue());
-                listMap.add(map);
-            }
-        } catch (NullPointerException | IllegalStateException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void initView() {
-        objectId = findViewById(R.id.textview_object_id);
-        inputObjectName = findViewById(R.id.edit_object_name);
-        addObject = findViewById(R.id.button_add);
-        listViewTag = findViewById(R.id.listView_tag);
-        simpleAdapter = new SimpleAdapter(AiBagActivity.this, listMap, R.layout.list_epc_item,
-                new String[]{"EPC", "NOTE"}, new int[]{R.id.textView_item_epc, R.id.textView_item_note});
-        listViewTag.setAdapter(simpleAdapter);
-        listViewTag.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, final int position, long id) {
-                final Map<String, Object> map = listMap.get(position);
-                AlertDialog dialog = new AlertDialog.Builder(AiBagActivity.this).create();
-                Window dialogWindow = dialog.getWindow();
-                Objects.requireNonNull(dialogWindow).setGravity(Gravity.CENTER);
-                dialogWindow.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT);
-                dialog.setIcon(R.mipmap.bluetooth);
-                dialog.setTitle("删除记录");
-                dialog.setButton(AlertDialog.BUTTON_POSITIVE, "确认", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        epcNotesEditor.putString((String) map.get("EPC"), (String) map.get("EPC"));
-                        epcNotesEditor.apply();
-                        listMap.remove(map);
-                        simpleAdapter.notifyDataSetChanged();
-                        dialog.dismiss();
-                    }
-                });
-                dialog.setButton(AlertDialog.BUTTON_NEGATIVE, "取消", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        dialog.dismiss();
-                    }
-                });
-                dialog.show();
-            }
-        });
-        final String[] previousEpc = {""};
-        final boolean[] notAdd = {false};
-        addObject.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                notAdd[0] = false;
-                EPC searchResult = new EPC();
-                searchResult.setEpc(objectId.getText().toString().trim());
-                Iterator iterator = listEPC.iterator();
-                EPC nextEpc;
-                while (iterator.hasNext()) {
-                    EPC epc = (EPC) iterator.next();
-                    if (epc.getEpc().equals(objectId.getText().toString().trim())) {
-                        searchResult = epc;
-                        if (searchResult.getEpc().equals(previousEpc[0])) {
-                            notAdd[0] = true;
-                        }
-                        if (iterator.hasNext()) {
-                            nextEpc = (EPC) iterator.next();
-                            if (!nextEpc.equals(epc)) {
-                                objectId.setText(nextEpc.getEpc());
-                            }
-                        }
-                        break;
-                    }
-                }
-                if (!notAdd[0]) {
-                    searchResult.setNote(inputObjectName.getText().toString().trim());
-                    Map<String, Object> map = new HashMap<>(8);
-                    map.put("EPC", searchResult.getEpc());
-                    map.put("NOTE", searchResult.getNote());
-                    boolean update = false;
-                    for (int i = 0; i < listMap.size(); ++i) {
-                        Map<String, Object> objectMap = listMap.get(i);
-                        if (objectMap.get("EPC").equals(searchResult.getEpc())) {
-                            update = true;
-                            listMap.set(i, map);
-                            break;
-                        }
-                    }
-                    if (!update) {
-                        listMap.add(map);
-                    }
-                    epcNotesEditor.putString(searchResult.getEpc(), searchResult.getNote());
-                    epcNotesEditor.apply();
-                    simpleAdapter.notifyDataSetChanged();
-                    previousEpc[0] = searchResult.getEpc();
-                    inputObjectName.setText("");
-                } else {
-                    searchResult.setNote(inputObjectName.getText().toString().trim());
-                    Map<String, Object> map = new HashMap<>(8);
-                    map.put("EPC", searchResult.getEpc());
-                    map.put("NOTE", searchResult.getNote());
-                    boolean update = false;
-                    for (int i = 0; i < listMap.size(); ++i) {
-                        Map<String, Object> objectMap = listMap.get(i);
-                        if (objectMap.get("EPC").equals(searchResult.getEpc())) {
-                            update = true;
-                            listMap.set(i, map);
-                            simpleAdapter.notifyDataSetChanged();
-                            inputObjectName.setText("");
-                            epcNotesEditor.putString(searchResult.getEpc(), searchResult.getNote());
-                            epcNotesEditor.apply();
-                            break;
-                        }
-                    }
-                    if (!update) {
-                        Toast.makeText(AiBagActivity.this, "已注册", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            }
-        });
     }
 
     @SuppressWarnings("Duplicates")
@@ -233,6 +115,23 @@ public class AiBagActivity extends AppCompatActivity {
         }
     }
 
+    private void initSavedRecords() {
+        epcNotes = getSharedPreferences("note", MODE_PRIVATE);
+        SharedPreferencesUtil.getInstance(this, "record");
+        savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
+    }
+
+    private void initView() {
+        foundList = findViewById(R.id.foundList);
+        missingList = findViewById(R.id.missingList);
+        foundListAdapter = new SimpleAdapter(ManualCheckActivity.this, foundItems, R.layout.list_my_item,
+                new String[]{"EPC", "NOTE"}, new int[]{R.id.textView_item_epc, R.id.textView_item_note});
+        missingListAdapter = new SimpleAdapter(ManualCheckActivity.this, missingItems, R.layout.list_my_item,
+                new String[]{"EPC", "NOTE"}, new int[]{R.id.textView_item_epc, R.id.textView_item_note});
+        foundList.setAdapter(foundListAdapter);
+        missingList.setAdapter(missingListAdapter);
+    }
+
     @SuppressWarnings("Duplicates")
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
@@ -247,6 +146,22 @@ public class AiBagActivity extends AppCompatActivity {
         return super.onKeyDown(keyCode, event);
     }
 
+    private void initNotification(boolean missing) {
+        Bitmap largeBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.icon_edit);
+        notificationManager = (NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+        Notification.Builder mBuilder = new Notification.Builder(ManualCheckActivity.this);
+        mBuilder.setContentTitle("智能书包")
+                .setContentText(missing ? "物品有遗失！" : "所有物品安好")
+                .setTicker("智能书包：物品扫描结果")
+                .setWhen(System.currentTimeMillis())
+                .setSmallIcon(R.mipmap.icon_edit)
+                .setLargeIcon(largeBitmap)
+                .setDefaults(Notification.DEFAULT_LIGHTS | Notification.DEFAULT_VIBRATE)
+                .setAutoCancel(true);
+        notification = mBuilder.build();
+        notificationManager.notify(1, notification);
+    }
+
     /**
      * 计算校验和
      */
@@ -259,7 +174,7 @@ public class AiBagActivity extends AppCompatActivity {
     }
 
     /**
-     * 将读取的EPC添加到list;
+     * 将读取的EPC添加到LISTVIEW
      */
     private void addToList(final Vector<EPC> list, final InventoryInfo info) {
         runOnUiThread(new Runnable() {
@@ -273,7 +188,6 @@ public class AiBagActivity extends AppCompatActivity {
                     epcTag.setNote(epcNotes.getString(epc, epc));
                     presentRecords.put(epc, epcNotes.getString(epc, epc));
                     list.add(epcTag);
-                    objectId.setText(epc);
                 } else {
                     for (int i = 0; i < list.size(); i++) {
                         EPC mEPC = list.get(i);
@@ -291,41 +205,47 @@ public class AiBagActivity extends AppCompatActivity {
                         }
                     }
                 }
-                try {
-                    Map<String, String> savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
-                    if (presentRecords.size() > savedRecords.size()) {
-                        SharedPreferencesUtil.putHashMapData("records", presentRecords);
-                    }
-                } catch (NullPointerException | IllegalStateException e) {
-                    e.printStackTrace();
-                    SharedPreferencesUtil.putHashMapData("records", presentRecords);
+                listMap = new ArrayList<>();
+                for (EPC epcData : list) {
+                    Map<String, Object> map = new HashMap<>(2);
+                    map.put("EPC", epcData.getEpc());
+                    map.put("NOTE", epcData.getNote());
+                    listMap.add(map);
                 }
-                if (!list.get(list.size() - 1).getNote().equals(list.get(list.size() - 1).getEpc())) {
-                    Map<String, Object> map = new HashMap<>(8);
-                    map.put("EPC", list.get(list.size() - 1).getEpc());
-                    map.put("NOTE", list.get(list.size() - 1).getNote());
-                    boolean add = true;
-                    for (Map<String, Object> objectMap : listMap) {
-                        if (objectMap.get("EPC").equals(list.get(list.size() - 1).getEpc())) {
-                            add = false;
-                            break;
+                for (Map.Entry<String, String> record : savedRecords.entrySet()) {
+                    if (!presentRecords.entrySet().contains(record)) {
+                        Map<String, String> missingRecords = new HashMap<>(2);
+                        missingRecords.put("EPC", record.getKey());
+                        missingRecords.put("NOTE", record.getValue());
+                        if (!missingItems.contains(missingRecords)) {
+                            missingItems.add(missingRecords);
+                        }
+                    } else {
+                        Map<String, String> inBagRecords = new HashMap<>(2);
+                        inBagRecords.put("EPC", record.getKey());
+                        inBagRecords.put("NOTE", record.getValue());
+                        if (!foundItems.contains(inBagRecords)) {
+                            foundItems.add(inBagRecords);
+                            missingItems.remove(inBagRecords);
                         }
                     }
-                    if (!listMap.contains(map) && add) {
-                        listMap.add(map);
-                        simpleAdapter.notifyDataSetChanged();
-                    }
                 }
-                if (listMap.isEmpty()) {
+                missingListAdapter.notifyDataSetChanged();
+                foundListAdapter.notifyDataSetChanged();
+                if (missingItems.isEmpty()) {
                     TextView empty = findViewById(R.id.empty);
-                    listViewTag.setEmptyView(empty);
+                    missingList.setEmptyView(empty);
+                }
+                if (foundItems.isEmpty()) {
+                    TextView empty = findViewById(R.id.empty);
+                    foundList.setEmptyView(empty);
                 }
             }
         });
     }
 
+    @SuppressWarnings("Duplicates")
     private class SendCmdThread extends Thread {
-        @SuppressWarnings("Duplicates")
         @Override
         public void run() {
             byte[] cmd = {(byte) 0xAA, (byte) 0x00, (byte) 0x22, (byte) 0x00,
@@ -351,7 +271,7 @@ public class AiBagActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressWarnings("Duplicates")
+    @SuppressWarnings({"AlibabaAvoidCommentBehindStatement", "Duplicates"})
     private class RecvThread extends Thread {
         @Override
         public void run() {
@@ -404,6 +324,7 @@ public class AiBagActivity extends AppCompatActivity {
                                     Arrays.fill(temp, (byte) 0x00);
                                 }
                             }
+
                         }
                     } catch (Exception e) {
                         e.printStackTrace();

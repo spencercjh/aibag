@@ -10,25 +10,25 @@ import com.shou.demo.R;
 /**
  * @author spencercjh
  */
-public class GuideActivity extends AppCompatActivity {
+public class CheckGuideActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_guide);
-        Button regist = findViewById(R.id.button_regist);
-        Button check = findViewById(R.id.button_check);
-        regist.setOnClickListener(new View.OnClickListener() {
+        setContentView(R.layout.activity_check_guide);
+        Button manualCheck = findViewById(R.id.button_manual_check);
+        Button scheduleCheck = findViewById(R.id.button_schedule_check);
+        manualCheck.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(GuideActivity.this, AiBagActivity.class);
+                Intent intent = new Intent(CheckGuideActivity.this, ManualCheckActivity.class);
                 startActivity(intent);
             }
         });
-        check.setOnClickListener(new View.OnClickListener() {
+        scheduleCheck.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(GuideActivity.this, CheckGuideActivity.class);
+                Intent intent = new Intent(CheckGuideActivity.this, ScheduleCheckActivity.class);
                 startActivity(intent);
             }
         });

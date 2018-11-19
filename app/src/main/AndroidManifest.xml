@@ -14,8 +14,6 @@
             android:theme="@style/AppTheme">
         <activity android:name=".jiuray.AiBagActivity"/>
         <activity android:name=".jiuray.BluetoothActivity">
-        </activity>
-        <activity android:name=".zhenronglife.activity.LoginActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
 
@@ -24,7 +22,11 @@
         </activity>
         <activity android:name=".jiuray.GuideActivity">
         </activity>
-        <activity android:name=".jiuray.CheckActivity">
+        <activity android:name=".jiuray.CheckGuideActivity">
+        </activity>
+        <activity android:name=".jiuray.ManualCheckActivity">
+        </activity>
+        <activity android:name=".jiuray.ScheduleCheckActivity">
         </activity>
     </application>
 
