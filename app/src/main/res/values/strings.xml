@@ -80,6 +80,6 @@
     <string name="定时检查">定时检查</string>
     <string name="智能书包">智能书包</string>
     <string name="已找到的物品">已找到的物品</string>
-    <string name="遗失的物品">遗失的物品</string>
+    <string name="遗失的物品">遗漏的物品</string>
 
 </resources>
