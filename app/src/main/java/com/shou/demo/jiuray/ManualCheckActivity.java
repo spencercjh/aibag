@@ -119,6 +119,7 @@ public class ManualCheckActivity extends AppCompatActivity {
         epcNotes = getSharedPreferences("note", MODE_PRIVATE);
         SharedPreferencesUtil.getInstance(this, "record");
         savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
+        System.out.println("#######################              "+savedRecords.size());
     }
 
     private void initView() {

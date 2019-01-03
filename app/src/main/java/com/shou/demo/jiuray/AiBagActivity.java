@@ -1,11 +1,14 @@
 package com.shou.demo.jiuray;
 
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.support.annotation.RequiresApi;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.*;
@@ -84,12 +87,14 @@ public class AiBagActivity extends AppCompatActivity {
     private void initList() {
         try {
             Map<String, String> savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
+            System.out.println("#######################              " + savedRecords.size());
             for (Map.Entry<String, String> record : savedRecords.entrySet()) {
                 Map<String, Object> map = new HashMap<>(2);
                 map.put("EPC", record.getKey());
                 map.put("NOTE", record.getValue());
                 listMap.add(map);
             }
+            presentRecords.putAll(savedRecords);
         } catch (NullPointerException | IllegalStateException e) {
             e.printStackTrace();
         }
@@ -114,10 +119,22 @@ public class AiBagActivity extends AppCompatActivity {
                 dialog.setIcon(R.mipmap.bluetooth);
                 dialog.setTitle("删除记录");
                 dialog.setButton(AlertDialog.BUTTON_POSITIVE, "确认", new DialogInterface.OnClickListener() {
+                    @TargetApi(Build.VERSION_CODES.N)
+                    @RequiresApi(api = Build.VERSION_CODES.N)
                     @Override
                     public void onClick(DialogInterface dialog, int which) {
-                        epcNotesEditor.putString((String) map.get("EPC"), (String) map.get("EPC"));
+                        epcNotesEditor.remove((String) map.get("EPC"));
+//                        epcNotesEditor.putString((String) map.get("EPC"), (String) map.get("EPC"));
                         epcNotesEditor.apply();
+                        epcNotesEditor.commit();
+//                        presentRecords.remove(map);
+                        Iterator<Map.Entry<String, String>> iterator = presentRecords.entrySet().iterator();
+                        while (iterator.hasNext()) {
+                            if (iterator.next().getKey().equals(map.get("EPC"))) {
+                                iterator.remove();
+                            }
+                        }
+                        SharedPreferencesUtil.putHashMapData("records", presentRecords);
                         listMap.remove(map);
                         simpleAdapter.notifyDataSetChanged();
                         dialog.dismiss();
@@ -175,8 +192,11 @@ public class AiBagActivity extends AppCompatActivity {
                     if (!update) {
                         listMap.add(map);
                     }
+                    presentRecords.put(searchResult.getEpc(), searchResult.getNote());
+                    SharedPreferencesUtil.putHashMapData("records", presentRecords);
                     epcNotesEditor.putString(searchResult.getEpc(), searchResult.getNote());
                     epcNotesEditor.apply();
+                    epcNotesEditor.commit();
                     simpleAdapter.notifyDataSetChanged();
                     previousEpc[0] = searchResult.getEpc();
                     inputObjectName.setText("");
@@ -191,10 +211,13 @@ public class AiBagActivity extends AppCompatActivity {
                         if (objectMap.get("EPC").equals(searchResult.getEpc())) {
                             update = true;
                             listMap.set(i, map);
+                            presentRecords.put(searchResult.getEpc(), searchResult.getNote());
+                            SharedPreferencesUtil.putHashMapData("records", presentRecords);
                             simpleAdapter.notifyDataSetChanged();
                             inputObjectName.setText("");
                             epcNotesEditor.putString(searchResult.getEpc(), searchResult.getNote());
                             epcNotesEditor.apply();
+                            epcNotesEditor.commit();
                             break;
                         }
                     }
@@ -271,7 +294,7 @@ public class AiBagActivity extends AppCompatActivity {
                     EPC epcTag = new EPC();
                     epcTag.setEpc(epc);
                     epcTag.setNote(epcNotes.getString(epc, epc));
-                    presentRecords.put(epc, epcNotes.getString(epc, epc));
+//                    presentRecords.put(epc, epcNotes.getString(epc, epc));
                     list.add(epcTag);
                     objectId.setText(epc);
                 } else {
@@ -279,21 +302,21 @@ public class AiBagActivity extends AppCompatActivity {
                         EPC mEPC = list.get(i);
                         if (epc.equals(mEPC.getEpc())) {
                             mEPC.setNote(epcNotes.getString(epc, epc));
-                            presentRecords.put(epc, epcNotes.getString(epc, epc));
+//                            presentRecords.put(epc, epcNotes.getString(epc, epc));
                             list.set(i, mEPC);
                             break;
                         } else if (i == (list.size() - 1)) {
                             EPC newEPC = new EPC();
                             newEPC.setEpc(epc);
                             newEPC.setNote(epcNotes.getString(epc, epc));
-                            presentRecords.put(epc, epcNotes.getString(epc, epc));
+//                            presentRecords.put(epc, epcNotes.getString(epc, epc));
                             list.add(newEPC);
                         }
                     }
                 }
                 try {
                     Map<String, String> savedRecords = SharedPreferencesUtil.getHashMapData("records", String.class);
-                    if (presentRecords.size() > savedRecords.size()) {
+                    if (presentRecords.size() >= savedRecords.size()) {
                         SharedPreferencesUtil.putHashMapData("records", presentRecords);
                     }
                 } catch (NullPointerException | IllegalStateException e) {
